@@ -14,6 +14,25 @@
 #
 # END COPYRIGHT
 
-# By default, use the developer llm_config
-# Worth noting that includes using env var substitution is expressly forbidden by HOCON readers.
-include "developer_llm_config.hocon"
+# Use Mistral as the default LLM since only MISTRAL_API_KEY is configured (no class key means no automatic fallback).
+# mistral-small-latest has more generous free-tier rate limits than mistral-medium-latest.
+# max_retries/timeout add backoff so transient 429 rate-limit errors from a multi-agent chain don't fail outright.
+# "fallbacks" gives deep multi-agent chains (e.g. healthcare_triage_assistant) a second model to
+# fall through to at runtime when mistral-small-latest's rate limit is exhausted by rapid-fire calls.
+"llm_config" {
+    "fallbacks": [
+        {
+            "class": "langchain_mistralai.chat_models.ChatMistralAI",
+            "model_name": "mistral-small-latest",
+            "max_retries": 12,
+            "timeout": 120,
+        },
+        {
+            "class": "langchain_mistralai.chat_models.ChatMistralAI",
+            "model_name": "open-mistral-nemo",
+            "max_retries": 12,
+            "timeout": 120,
+        },
+    ]
+}
+
